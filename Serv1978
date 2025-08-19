@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Servite Primary Lunch Orders</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+    h1, h2 { text-align: center; color: #2c3e50; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table, th, td { border: 1px solid #000; }
+    th, td { padding: 8px; text-align: center; }
+    input[type="number"] { width: 60px; }
+    input[type="text"], input[type="date"] { padding: 5px; margin: 5px 0; }
+    .order-section { border: 2px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 10px; background-color: #ecf0f1; }
+    .btn { padding: 8px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background-color: #3498db; color: white; }
+    .btn:hover { background-color: #2980b9; }
+    .canteen-table { background-color: #f1c40f; }
+    .tuck-table { background-color: #e67e22; }
+</style>
+</head>
+<body>
+
+<h1>Servite Primary School Daily Lunch Orders</h1>
+
+<div class="order-section">
+    <h2>New Order</h2>
+    <label>Class/Grade & Teacher: <input type="text" id="className" placeholder="Grade & Teacher"></label>
+    <label>Date: <input type="date" id="orderDate"></label>
+    
+    <h3 style="color:#f39c12;">Canteen</h3>
+    <table id="canteenTable" class="canteen-table">
+        <tr>
+            <th>Item</th>
+            <th>Price (JMD)</th>
+            <th>Qty</th>
+            <th>Total</th>
+        </tr>
+    </table>
+    
+    <h3 style="color:#d35400;">Tuck Shop</h3>
+    <table id="tuckTable" class="tuck-table">
+        <tr>
+            <th>Item</th>
+            <th>Price (JMD)</th>
+            <th>Qty</th>
+            <th>Total</th>
+        </tr>
+    </table>
+
+    <button class="btn" onclick="addOrder()">Add/Update Order</button>
+    <button class="btn" onclick="deleteOrder()">Delete Order</button>
+    <button class="btn" onclick="resetDailyOrders()">Reset All Orders</button>
+</div>
+
+<h2>Class Orders Report</h2>
+<select id="selectClass" onchange="generateClassReport()">
+    <option value="">Select Class & Date</option>
+</select>
+<div id="classReport"></div>
+
+<h2>Summary Report</h2>
+<button class="btn" onclick="generateSummaryReport()">Generate Summary</button>
+<div id="summaryReport"></div>
+
+<script>
+const canteenItems = [
+    { name: "Sm Lunch", price: 450 },
+    { name: "Lg Lunch", price: 500 },
+    { name: "Sm Chicken and Chips", price: 500 },
+    { name: "Lg Chicken and Chips", price: 550 },
+    { name: "Sm Soup", price: 200 },
+    { name: "Med Soup", price: 250 },
+    { name: "Lg Soup", price: 300 },
+    { name: "Path Sm Lunch", price: 0 },
+    { name: "Path Med Soup", price: 0 },
+];
+
+const tuckShopItems = [
+    { name: "Bun and Cheese", price: 300 },
+    { name: "Cocoa Bread", price: 200 },
+    { name: "Hot Dog", price: 200 },
+    { name: "Beef Patty", price: 300 },
+    { name: "Chicken Patty", price: 350 },
+];
+
+function initTables() {
+    const canteenTable = document.getElementById('canteenTable');
+    canteenItems.forEach(item => {
+        let row = canteenTable.insertRow();
+        row.insertCell(0).innerText = item.name;
+        row.insertCell(1).innerText = item.price;
+        let qtyCell = row.insertCell(2);
+        let qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = 0;
+        qtyInput.value = 0;
+        qtyInput.oninput = updateTotals;
+        qtyCell.appendChild(qtyInput);
+        row.insertCell(3).innerText = '0';
+    });
+
+    const tuckTable = document.getElementById('tuckTable');
+    tuckShopItems.forEach(item => {
+        let row = tuckTable.insertRow();
+        row.insertCell(0).innerText = item.name;
+        row.insertCell(1).innerText = item.price;
+        let qtyCell = row.insertCell(2);
+        let qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.min = 0;
+        qtyInput.value = 0;
+        qtyInput.oninput = updateTotals;
+        qtyCell.appendChild(qtyInput);
+        row.insertCell(3).innerText = '0';
+    });
+}
+
+function updateTotals() {
+    const canteenTable = document.getElementById('canteenTable');
+    for(let i=1; i<canteenTable.rows.length; i++){
+        let qty = parseInt(canteenTable.rows[i].cells[2].firstChild.value) || 0;
+        canteenTable.rows[i].cells[3].innerText = qty * canteenItems[i-1].price;
+    }
+    const tuckTable = document.getElementById('tuckTable');
+    for(let i=1; i<tuckTable.rows.length; i++){
+        let qty = parseInt(tuckTable.rows[i].cells[2].firstChild.value) || 0;
+        tuckTable.rows[i].cells[3].innerText = qty * tuckShopItems[i-1].price;
+    }
+}
+
+function addOrder() {
+    const className = document.getElementById('className').value.trim();
+    const orderDate = document.getElementById('orderDate').value;
+    if(!className || !orderDate) { alert('Please enter class and date'); return; }
+
+    const canteenOrder = canteenItems.map((item, index) => {
+        return { name: item.name, qty: parseInt(document.getElementById('canteenTable').rows[index+1].cells[2].firstChild.value) || 0, total: parseInt(document.getElementById('canteenTable').rows[index+1].cells[3].innerText) || 0 }
+    });
+    const tuckOrder = tuckShopItems.map((item, index) => {
+        return { name: item.name, qty: parseInt(document.getElementById('tuckTable').rows[index+1].cells[2].firstChild.value) || 0, total: parseInt(document.getElementById('tuckTable').rows[index+1].cells[3].innerText) || 0 }
+    });
+
+    let allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    let existingIndex = allOrders.findIndex(o => o.className === className && o.date === orderDate);
+    const orderData = { className, date: orderDate, canteenOrder, tuckOrder };
+    if(existingIndex >= 0) {
+        allOrders[existingIndex] = orderData;
+    } else {
+        allOrders.push(orderData);
+        const selectClass = document.getElementById('selectClass');
+        const option = document.createElement('option');
+        option.value = className + '|' + orderDate;
+        option.innerText = className + ' (' + orderDate + ')';
+        selectClass.appendChild(option);
+    }
+
+    localStorage.setItem('orders', JSON.stringify(allOrders));
+    alert('Order saved!');
+}
+
+function deleteOrder() {
+    const className = document.getElementById('className').value.trim();
+    const orderDate = document.getElementById('orderDate').value;
+    if(!className || !orderDate) { alert('Enter class & date to delete'); return; }
+
+    let allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    allOrders = allOrders.filter(o => !(o.className === className && o.date === orderDate));
+    localStorage.setItem('orders', JSON.stringify(allOrders));
+
+    const selectClass = document.getElementById('selectClass');
+    for(let i=0;i<selectClass.options.length;i++){
+        if(selectClass.options[i].value === className + '|' + orderDate){
+            selectClass.remove(i);
+            break;
+        }
+    }
+
+    document.getElementById('classReport').innerHTML = '';
+    alert('Order deleted!');
+}
+
+function resetDailyOrders() {
+    if(confirm("Are you sure you want to delete all orders?")){
+        localStorage.removeItem('orders');
+        const selectClass = document.getElementById('selectClass');
+        selectClass.innerHTML = '<option value="">Select Class & Date</option>';
+        document.getElementById('classReport').innerHTML = '';
+        document.getElementById('summaryReport').innerHTML = '';
+        alert('All orders reset!');
+    }
+}
+
+function generateClassReport() {
+    const select = document.getElementById('selectClass');
+    const value = select.value;
+    if(!value) return;
+    const [className, date] = value.split('|');
+    const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    const order = allOrders.find(o => o.className === className && o.date === date);
+    if(!order) return;
+
+    let html = `<h3>${className} - ${date}</h3>`;
+    html += '<h4 style="color:#f39c12;">Canteen</h4><table><tr><th>Item</th><th>Qty</th><th>Total</th></tr>';
+    let canteenSubtotal = 0;
+    order.canteenOrder.forEach(item => {
+        if(item.qty > 0){
+            html += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.total}</td></tr>`;
+            canteenSubtotal += item.total;
+        }
+    });
+    html += `<tr><td colspan="2"><strong>Subtotal</strong></td><td>${canteenSubtotal}</td></tr></table>`;
+
+    html += '<h4 style="color:#d35400;">Tuck Shop</h4><table><tr><th>Item</th><th>Qty</th><th>Total</th></tr>';
+    let tuckSubtotal = 0;
+    order.tuckOrder.forEach(item => {
+        if(item.qty > 0){
+            html += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.total}</td></tr>`;
+            tuckSubtotal += item.total;
+        }
+    });
+    html += `<tr><td colspan="2"><strong>Subtotal</strong></td><td>${tuckSubtotal}</td></tr></table>`;
+
+    document.getElementById('classReport').innerHTML = html;
+}
+
+function generateSummaryReport() {
+    const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    let canteenSummary = {};
+    let tuckSummary = {};
+    let canteenTotal = 0;
+    let tuckTotal = 0;
+
+    allOrders.forEach(order => {
+        order.canteenOrder.forEach(item => {
+            if(item.qty > 0){
+                canteenSummary[item.name] = (canteenSummary[item.name] || 0) + item.qty;
+                canteenTotal += item.total;
+            }
+        });
+        order.tuckOrder.forEach(item => {
+            if(item.qty > 0){
+                tuckSummary[item.name] = (tuckSummary[item.name] || 0) + item.qty;
+                tuckTotal += item.total;
+            }
+        });
+    });
+
+    let html = '<h4 style="color:#f39c12;">Canteen Summary</h4><table><tr><th>Item</th><th>Total Qty</th></tr>';
+    for(const item in canteenSummary){
+        html += `<tr><td>${item}</td><td>${canteenSummary[item]}</td></tr>`;
+    }
+    html += `<tr><td><strong>Total Cost</strong></td><td>${canteenTotal}</td></tr></table>`;
+
+    html += '<h4 style="color:#d35400;">Tuck Shop Summary</h4><table><tr><th>Item</th><th>Total Qty</th></tr>';
+    for(const item in tuckSummary){
+        html += `<tr><td>${item}</td><td>${tuckSummary[item]}</td></tr>`;
+    }
+    html += `<tr><td><strong>Total Cost</strong></td><td>${tuckTotal}</td></tr></table>`;
+
+    document.getElementById('summaryReport').innerHTML = html;
+}
+
+window.onload = initTables;
+</script>
+
+</body>
+</html>
